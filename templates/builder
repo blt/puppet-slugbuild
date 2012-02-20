@@ -1,0 +1,38 @@
+#!/bin/sh -e
+
+MKDIR=/bin/mkdir
+RSYNC=/usr/bin/rsync
+GIT=/usr/bin/git
+MKSQUASHFS=/usr/bin/mksquashfs
+
+read reponame oldrev newrev refname
+branchname=`echo ${refname} | awk -F '/' '{ print $3 }'`
+
+# Construct or merely update the source clone of $reponame
+$MKDIR -p clones
+if [ -d ~/clones/${reponame} ] # already cloned
+then
+  cd ~/clones/${reponame}
+  $GIT checkout master
+  $GIT pull
+else # fresh clone
+  cd ~/clones/
+  $GIT clone git@git.troutwine.us:${reponame}.git
+  cd ${reponame}
+fi
+
+# Ensure that we have the latest source code, submodules too.
+$GIT checkout ${newrev}
+$GIT submodule sync && $GIT submodule update --init --recursive
+
+# Create the stripped version of the source. $GIT-archive is _not_ used because
+# it completely falls over in the presence of submodules.
+$MKDIR -p ~/strips/$reponame
+$RSYNC -avz --exclude='.git' --delete . ~/strips/${reponame}/
+
+# Build the read-only slug. Future versions of this module will include
+# heuristics to interact with makefiles, rakefiles, maven and any other build
+# system that might be requested.
+$MKDIR -p ~/builds/${reponame}
+$MKSQUASHFS ~/strips/${reponame} ~/builds/${reponame}/${reponame}_${newrev}.sqsh
+
