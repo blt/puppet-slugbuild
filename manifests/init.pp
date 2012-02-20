@@ -7,6 +7,12 @@
 #  *gitcentral* - Domain from which slugbuilder will pull sources.
 #  *githosts* - The hosts from which git sources will be pulled. Comma separated.
 #  [*user*]   - The username of the slugbuilder. Default 'slugbuilder'
+#  [*mquser*] - Set the RabbitMQ user that slugbuild will use.
+#   *mqpass*  - Set the RabbitMQ user's password.
+#  [*mqhost*] - Set the RabbitMQ host to communicate with. Default 'mq0'.
+#  [*mqcert*] - Set the RabbitMQ certified client certificate. Default '/etc/rabbitmq/ssl/client/cert.pem
+#  [*mqkey*]  - Set the RabbitMQ client private key. Default '/etc/rabbitmq/ssl/client/key.pem
+#  [*mqport*] - Set the RabbitMQ port to communicate over. Default 5671.
 #
 class slugbuild(
   $ensure=present,
@@ -15,6 +21,12 @@ class slugbuild(
   $gitcentral,
   $gituser='git',
   $githosts,
+  $mquser='git',
+  $mqpass,
+  $mqhost='mq0',
+  $mqcert='/etc/rabbitmq/ssl/client/cert.pem',
+  $mqkey='/etc/rabbitmq/ssl/client/key.pem',
+  $mqport='5671',
 )
 {
   # The home directory of slugbuilder and its user. Slugbuilder will work
@@ -66,5 +78,31 @@ class slugbuild(
   File {
     owner => $user,
     group => $user,
+  }
+}
+
+# Ensures that all preliminary matters relating to pulling slubs from the
+# builder central are satisifed.
+class slugbuild::slugclient(
+  $ensure=present,
+  $mquser='git',
+  $mqpass,
+  $mqhost='mq0',
+  $mqcert='/etc/rabbitmq/ssl/client/cert.pem',
+  $mqkey='/etc/rabbitmq/ssl/client/key.pem',
+  $mqport='5671',
+  $slughome='/var/slugbuilder',
+  $sluguser='slugbuilder',
+  $sluggroup=$sluguser,
+  $slughost,
+)
+{
+  file { '/var/lib/slugs':
+    ensure => $ensure ? { present => directory, default => absent, },
+  }
+  file { '/usr/bin/slugsync':
+    ensure => $ensure ? { present => file, default => absent, },
+    content => template('slugbuild/slugsync.erb'),
+    mode => 0755,
   }
 }

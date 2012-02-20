@@ -1,0 +1,13 @@
+#!/bin/sh -e
+
+# Read the input in, even if it is not new-line terminated.
+IFS='' read -r LINE || [ -n "$LINE" ]
+project=`echo $LINE | awk '{ print $1 }'`
+rev=`echo $LINE | awk '{ print $2 }'`
+
+rsync -vzr --delete -e ssh <%= sluguser %>@<%= slughost %>:<%= slughome %>/builds/${project} /var/lib/slugs
+
+/usr/bin/hare --port <%= mqport %> --host <%= mqhost %> --username <%= mquser %> \
+    --password "<%= mqpass %>" --vhost "/traut" --exchange_name traut \
+    --route_key "${project}.redeploy" --ssl_cert <%= mqcert %> \
+    --ssl_key <%= mqkey %> --producer "${project} ${rev}"

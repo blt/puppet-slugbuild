@@ -62,3 +62,8 @@ log "Building slug ${slug} in ${builddir}"
 $MKDIR -p ${builddir}
 $MKSQUASHFS ${stripdir} ${builddir}/${slug}
 
+/usr/bin/hare --port <%= mqport %> --host <%= mqhost %> --username <%= mquser %> \
+    --password "<%= mqpass %>" --vhost "/traut" --exchange_name traut \
+    --route_key "git.${reponame}.${branchname}.build" --ssl_cert <%= mqcert %> \
+    --ssl_key <%= mqkey %> --producer "${reponame} ${newrev}"
+
